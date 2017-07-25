@@ -2,10 +2,10 @@ NAME: Jeffrey Xu
 EMAIL: jeffreyhxu@gmail.com
 ID: 404768745
 
-This tarball includes selfie.png, ifconfig.png, scp.png,
+This tarball includes selfie.jpg, ifconfig.png, scp.png,
 compilation_and_execution.png, git_clone.png, and README.
 
-selfie.png is a selfie of me holding my assembled and plugged-in Edison.
+selfie.jpg is a selfie of me holding my assembled and plugged-in Edison.
 
 ifconfig.png is a screenshot from a USB terminal command session showing the IP
 and MAC addresses of the Edison. This is not actually from the session in which

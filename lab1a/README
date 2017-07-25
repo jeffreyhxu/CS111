@@ -1,0 +1,24 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+Contained in this tarball are lab1a.c, Makefile, and README.
+
+lab1a.c is the source code for a program that reads input from the keyboard and
+echoes it back to the terminal. With the --shell argument, it forks to open a
+shell in a new process and uses pipes to transfer input from the keyboard to the
+shell and output from the shell back to the terminal.
+
+Makefile supports the default target, which builds the lab1a executable, clean,
+which removes the tarball and the executable, and dist, which builds the
+tarball.
+
+README describes the contents of the tarball and gives information on the
+sources used to research topics I was unsure about.
+
+Aside from the Open Group Base Specifications
+(http://pubs.opengroup.org/onlinepubs/9699919799/nframe.html), which I used for
+information on all the system calls used, I used Google to find an answer on
+askubuntu (http://askubuntu.com/questions/201303/what-is-a-defunct-process-and-w
+hy-doesnt-it-get-killed) to figure out what it meant when an early version of
+lab1a created a defunct shell in its child process.

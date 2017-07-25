@@ -1,0 +1,37 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+Contained in this tarball are lab0.c, Makefile, backtrace.png, breakpoint.png,
+and README.
+
+lab0.c is the source code for a program that copies its standard input to
+standard output. It supports the arguments --input=filename, to use the
+specified file as standard input, --output=filename, to use the specified file
+as standard output, --segfault, to cause a segfault, and --catch, to catch a
+segfault and display an error message.
+
+Makefile supports the default target, which builds the lab0 executable, check,
+which runs a smoke-test to check the program's functionality, clean, which
+removes all Makefile-created files, and dist, which builds the distribution
+tarball. The smoke-test includes the following checks:
+providing an unrecognized argument to check that an error message and exit
+status 1 are produced
+providing an invalid input file to check that an error message and exit status 2
+are produced
+providing an invalid output file (an empty string) to check that an error
+message and exit status 3 are produced
+calling lab0 with arguments --segfault and --catch to check that a segfault is
+produced and caught, producing an error message and exit status 4
+calling lab0 with a valid input file and comparing its output to its input to
+make sure lab0 accurately copies its standard input to its standard output
+
+backtrace.png is a screenshot of the output of a backtrace produced by running
+lab0 with the --segfault argument under gdb.
+
+breakpoint.png is a screenshot of proof that the pointer used to induce a
+segfault is NULL, created by examining the pointer in gdb.
+
+To learn how to use getopt_long, I used sections 25.2.3 and 25.2.4 of the GNU C
+library. To refresh myself on how to write the Makefile and the smoke-test, I
+referred back to my notes and work from CS 35L.

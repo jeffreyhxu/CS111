@@ -1,0 +1,246 @@
+/* NAME: Jeffrey Xu
+ * EMAIL: jeffreyhxu@gmail.com
+ * ID: 404768745
+ */
+#include <unistd.h>
+#include <stdlib.h>
+#include <getopt.h>
+#include <sys/wait.h>
+#include <termios.h>
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
+#include <poll.h>
+#include <stdio.h>
+
+int shutdown_flag = 0;
+struct termios old_term;
+
+void flagger(int sig){
+  shutdown_flag = 1; // The shutdown handling will be done in the poll loop.
+}
+
+void term_restore(){
+  tcsetattr(0, TCSAFLUSH, &old_term);
+}
+
+int main(int argc, char **argv){
+  int shell_flag = 0;
+  struct option lopts[2] =
+    {
+      {"shell", no_argument, &shell_flag, 1},
+      {0, 0, 0, 0}
+    };
+  int opti;
+  for(;;){
+    int opt_stat = getopt_long(argc, argv, "", lopts, &opti);
+    if(opt_stat == -1)
+      break;
+    else if(opt_stat != 0){
+      fprintf(stderr, "Usage: lab1a [--shell]\r\n");
+      exit(1);
+    }
+  }
+  
+  tcgetattr(0, &old_term);
+  struct termios new_term = old_term;
+  new_term.c_iflag = ISTRIP;
+  new_term.c_oflag = 0;
+  new_term.c_lflag = 0;
+  if(tcsetattr(0, TCSAFLUSH, &new_term) == -1){
+    fprintf(stderr, "Error using tcsetattr to set character-at-a-time, no-echo mode: %s\r\n", strerror(errno));
+    exit(1);
+  }
+  atexit(term_restore);
+  
+  if(shell_flag){
+    int in_pipe[2];
+    if(pipe(in_pipe) == -1){
+      fprintf(stderr, "Error using pipe to create a pipe to input: %s\r\n", strerror(errno));
+      exit(1);
+    }
+    int out_pipe[2];
+    if(pipe(out_pipe) == -1){
+      fprintf(stderr, "Error using pipe to create a pipe from output: %s\r\n", strerror(errno));
+      exit(1);
+    }
+  
+    pid_t child = fork();
+    if(child == -1){
+      fprintf(stderr, "Error using fork to create a new process: %s\r\n", strerror(errno));
+      exit(1);
+    }
+    if(child == 0){
+      close(0);
+      dup(in_pipe[0]);
+      close(in_pipe[0]);
+
+      close(in_pipe[1]);
+    
+      close(1);
+      dup(out_pipe[1]);
+      close(2);
+      dup(out_pipe[1]);
+      close(out_pipe[1]);
+
+      close(out_pipe[0]);
+    
+      if(execl("/bin/bash", "/bin/bash", (char *)0) == -1){
+	fprintf(stderr, "Error using execl to execute /bin/bash: %s\r\n", strerror(errno));
+	exit(1);
+      }
+    }
+    close(in_pipe[0]);
+    close(out_pipe[1]);
+
+    struct pollfd pollfds[2];
+    pollfds[0].fd = 0;
+    pollfds[0].events = POLLIN;
+    pollfds[1].fd = out_pipe[0];
+    pollfds[1].events = POLLIN;
+
+    signal(SIGPIPE, flagger);
+
+    int in_closed = 0;
+    for(;;){
+      if(poll(pollfds, 2, 0) == -1){
+	fprintf(stderr, "Error using poll to get input: %s\r\n", strerror(errno));
+	exit(1);
+      }
+      if(pollfds[0].revents & POLLIN){
+	char buf[256];
+	int bytes = read(0, buf, 256);
+	if(bytes == -1){
+	  fprintf(stderr, "Error using read to read from keyboard: %s\r\n", strerror(errno));
+	  exit(1);
+	}
+	char ech_buf[512]; // in case every character in the buffer is <lf>
+	int ech_bytes = 0;
+	char shell_buf[256];
+	int eof = 0;
+	for(int i = 0; i < bytes; i++){
+	  if(buf[i] == '\r' || buf[i] == '\n'){
+	    ech_buf[ech_bytes] = '\r';
+	    ech_bytes++;
+	    ech_buf[ech_bytes] = '\n';
+	    shell_buf[i] = '\n';
+	  }
+	  else if(buf[i] == 0x04){ // end of file
+	    ech_buf[ech_bytes] = '^';
+	    ech_bytes++;
+	    ech_buf[ech_bytes] = 'D';
+	    eof = 1;
+	    shell_buf[i] = ' ';
+	  }
+	  else if(buf[i] == 0x03){ // interrupt
+	    ech_buf[ech_bytes] = '^';
+	    ech_bytes++;
+	    ech_buf[ech_bytes] = 'C';
+	    shell_buf[i] = ' ';
+	    kill(child, SIGINT);
+	  }
+	  else{
+	    ech_buf[ech_bytes] = buf[i];
+	    shell_buf[i] = buf[i];
+	  }
+	  ech_bytes++;
+	}
+	if(write(1, ech_buf, ech_bytes) == -1){
+	  fprintf(stderr, "Error using write to write to display: %s\r\n", strerror(errno));
+	  exit(1);
+	}
+	if(!in_closed && write(in_pipe[1], shell_buf, bytes) == -1 && !shutdown_flag){
+	  fprintf(stderr, "Error using write to write to pipe to shell input: %s\r\n", strerror(errno));
+	  exit(1);
+	}
+	if(eof && !in_closed){
+	  if(close(in_pipe[1]) == -1){
+	    fprintf(stderr, "Error using close to close pipe to shell input: %s\r\n", strerror(errno));
+	    exit(1);
+	  }
+	  in_closed = 1;
+	}
+      }
+      if(pollfds[1].revents & POLLIN){
+	char buf[256];
+	int bytes = read(out_pipe[0], buf, 256);
+	if(bytes == -1){
+	  fprintf(stderr, "Error using read to read from pipe from shell output: %s\r\n", strerror(errno));
+	  exit(1);
+	}
+	char ech_buf[512]; // in case every character in the buffer is <lf>
+	int ech_bytes = 0;
+	for(int i = 0; i < bytes; i++){
+	  if(buf[i] == '\r' || buf[i] == '\n'){
+	    ech_buf[ech_bytes] = '\r';
+	    ech_bytes++;
+	    ech_buf[ech_bytes] = '\n';
+	  }
+	  else if(buf[i] == 0x04){ // end of file
+	    ech_buf[ech_bytes] = buf[i];
+	    shutdown_flag = 1;
+	  }
+	  else{
+	    ech_buf[ech_bytes] = buf[i];
+	  }
+	  ech_bytes++;
+	}
+	if(write(1, ech_buf, ech_bytes) == -1){
+	  fprintf(stderr, "Error using write to write to display: %s\r\n", strerror(errno));
+	  exit(1);
+	}
+      }
+      if((pollfds[1].revents & POLLHUP) || shutdown_flag){
+	if(!in_closed){
+	  if(close(in_pipe[1]) == -1){
+	    fprintf(stderr, "Error using close to close pipe to shell input: %s\r\n", strerror(errno));
+	    exit(1);
+	  }
+	}
+	int exit_status;
+	if(waitpid(child, &exit_status, 0) == -1){
+	  fprintf(stderr, "Error using waitpid to get exit status of shell: %s\r\n", strerror(errno));
+	  exit(1);
+	}
+	fprintf(stderr, "SHELL EXIT SIGNAL=%d STATUS=%d\r\n", WTERMSIG(exit_status), WEXITSTATUS(exit_status));
+	break;
+      }
+    }
+  }
+  else{
+    int eof = 0;
+    while(!eof){
+      char buf[256];
+      int bytes = read(0, buf, 256);
+      if(bytes == -1){
+	fprintf(stderr, "Error using read to read from keyboard: %s\r\n", strerror(errno));
+	exit(1);
+      }
+      char ech_buf[512]; // in case every character in the buffer is <lf>
+      int ech_bytes = 0;
+      for(int i = 0; i < bytes; i++){
+	if(buf[i] == '\r' || buf[i] == '\n'){
+	  ech_buf[ech_bytes] = '\r';
+	  ech_bytes++;
+	  ech_buf[ech_bytes] = '\n';
+	}
+	else if(buf[i] == 0x04){ // end of file
+	  ech_buf[ech_bytes] = '^';
+	  ech_bytes++;
+	  ech_buf[ech_bytes] = 'D';
+	  eof = 1;
+	}
+	else{
+	  ech_buf[ech_bytes] = buf[i];
+	}
+	ech_bytes++;
+      }
+      if(write(1, ech_buf, ech_bytes) == -1){
+	fprintf(stderr, "Error using write to write to display: %s\r\n", strerror(errno));
+	exit(1);
+      }
+    }
+  }
+  
+  exit(0);
+}

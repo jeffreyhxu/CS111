@@ -1,0 +1,39 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+This tarball includes selfie.png, ifconfig.png, scp.png,
+compilation_and_execution.png, git_clone.png, and README.
+
+selfie.png is a selfie of me holding my assembled and plugged-in Edison.
+
+ifconfig.png is a screenshot from a USB terminal command session showing the IP
+and MAC addresses of the Edison. This is not actually from the session in which
+I set up the Wi-Fi access; that session was on a Windows computer. To avoid
+having to transfer files and for consistency, I replicated the ifconfig command
+on a Ubuntu VM.
+
+scp.png is a screenshot from a local session in which I used scp to copy a hello
+world program from the VM to the Edison. Note that there is no message asking
+about creating a trusted connection because I accidentally copied the wrong file
+over on my first attempt, so this is after the trusted connection was
+established. In addition, the ssh keys were set up in a previous session.
+
+compilation_and_execution.png is a screenshot from a Wi-Fi SSH session in which
+I built and ran the hello world program. Again, because SSH keys were set up
+previously, no login was required.
+
+git_clone.png is a screenshot from a Wi-Fi SSH session in which my CS111 github
+repository was cloned onto the Edison. Unfortunately, I closed out of the
+terminal before reading that the screenshot should also contain the installation
+of git, so I cleared the terminal to show only the git clone command and
+subsequent local directory.
+
+README describes the files in the tarball and provides the serial number and MAC
+address of my Edison.
+
+Serial number:
+Edison module:   FZEDA 652D 02BU7 501
+Expansion board: FZER  652B 01V9H 500
+
+MAC address: 90:b6:86:05:d4:ba

@@ -1,0 +1,10 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+The tarball contains lab1b-client.c, lab1b-server.c, Makefile, and README.
+
+lab1b-client.c is the source code for a program that will open a connection to
+a server with port specified by a mandatory --port= parameter and host either
+specified by the --host= option or otherwise defaulting to
+lnxsrv09.seas.ucla.edu. The program sends 

@@ -1,0 +1,33 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+The tarball contains lab1b-client.c, lab1b-server.c, Makefile, and README.
+
+lab1b-client.c is the source code for a program that will open a connection to
+a server with port specified by a mandatory --port= parameter and host either
+specified by the --host= option or otherwise defaulting to
+lnxsrv09.seas.ucla.edu. The program sends input it gets to the server while also
+echoing it to the screen. It also echoes output it receives from the server to
+the screen. When the server closes, the client closes. In addition, there are
+optional --log= and --encrypt= options. The --log= option writes all bytes sent
+through the socket or received from the socket to a log file. The --encrypt=
+option encrypts all bytes sent and decrypts all bytes received using the first
+32 bytes of the specified file as a key for the twofish encryption algorithm.
+For proper functionality, the --port= and --encrypt= options should be the same
+on both client and server.
+
+lab1b-server.c is the source code for a program that will accept a connection
+with port specified by a mandatory --port= parameter. The program takes in input
+from the socket and sends it to a shell, in addition to sending an interrupt
+when ^C is received. It then takes the output of the shell and sends it back
+across the socket to the client. In addition, it also supports the --encrypt=
+option, implemented the same way.
+
+Makefile includes the default target as well as client, server, clean, and dist.
+The default target builds both the client and the server, while the client and
+server targets only build their respective program. The clean target removes
+both programs as well as the tarball, and the dist target builds the tarball.
+
+README includes the name, email, and ID of the student who made the project, as
+well as a description of the files contained within the tarball.

@@ -15,13 +15,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <mcrypt.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 int shutdown_flag = 0;
 struct termios old_term;
-MCRYPT encrypt, decrypt;
 
 void flagger(int sig){
   shutdown_flag = 1; // The shutdown handling will be done in the poll loop.
@@ -31,36 +27,25 @@ void term_restore(){
   tcsetattr(0, TCSAFLUSH, &old_term);
 }
 
-void crypt_closer(){
-  mcrypt_generic_deinit(encrypt);
-  mcrypt_module_close(encrypt);
-  mcrypt_generic_deinit(decrypt);
-  mcrypt_module_close(decrypt);
-}
-
 int main(int argc, char **argv){
   int port_flag = 0;
-  struct option lopts[3] =
+  struct option lopts[2] =
     {
       {"port", required_argument, &port_flag, 1},
-      {"encrypt", required_argument, NULL, 1},
       {0, 0, 0, 0}
     };
   int opti;
   int port;
-  char *keyfile = NULL;
   for(;;){
     int opt_stat = getopt_long(argc, argv, "", lopts, &opti);
     if(opt_stat == -1)
       break;
-    else if(opt_stat == 1)
-      keyfile = optarg;
+    else if(!strcmp(lopts[opti].name, "port"))
+      port = atoi(optarg);
     else if(opt_stat != 0){
       fprintf(stderr, "Usage: lab1a --port=port# [--log=filename]\r\n");
       exit(1);
     }
-    else if(opti == 0 && optarg != NULL)
-      port = atoi(optarg);
   }
   if(!port_flag){
     fprintf(stderr, "Usage: lab1a --port=port# [--log=filename]\r\n");
@@ -148,52 +133,6 @@ int main(int argc, char **argv){
 
   signal(SIGPIPE, flagger);
 
-  if(keyfile != NULL){
-    encrypt = mcrypt_module_open("twofish", NULL, "cfb", NULL);
-    if(encrypt == MCRYPT_FAILED){
-      fprintf(stderr, "Error using mcrypt_module_open to open encryption session");
-      exit(1);
-    }
-    int keysize = mcrypt_enc_get_key_size(encrypt);
-    char *key = malloc(keysize);
-    int keyfd = open(keyfile, O_RDONLY);
-    if(keyfd == -1){
-      fprintf(stderr, "Error using open to open key file: %s\r\n", strerror(errno));
-      exit(1);
-    }
-    keysize = read(keyfd, key, keysize);
-    if(keysize == -1){
-      fprintf(stderr, "Error using read to read key from file: %s\r\n", strerror(errno));
-      exit(1);
-    }
-    if(close(keyfd) == -1){
-      fprintf(stderr, "Error using close to close key file: %s\r\n", strerror(errno));
-      exit(1);
-    }
-    //printf("Key: %s, Size: %i, sizeof: %i, Max: %i\r\n", key, keysize, sizeof(key), mcrypt_enc_get_key_size(encrypt));
-    char *eniv = malloc(mcrypt_enc_get_iv_size(encrypt));
-    memset(eniv, 0, sizeof(char) * mcrypt_enc_get_iv_size(encrypt));
-    int en_stat = mcrypt_generic_init(encrypt, (void *)key, sizeof(key), (void *)eniv);
-    if(en_stat < 0){
-      fprintf(stderr, "Error using mcrypt_generic_init to initialize encryption session: %s/r/n", mcrypt_strerror(en_stat));
-      exit(1);
-    }
-    decrypt = mcrypt_module_open("twofish", NULL, "cfb", NULL);
-    if(decrypt == MCRYPT_FAILED){
-      fprintf(stderr, "Error using mcrypt_module_open to open decryption session");
-      exit(1);
-    }
-    char *deiv = malloc(mcrypt_enc_get_iv_size(decrypt));
-    memset(deiv, 0, sizeof(char) * mcrypt_enc_get_iv_size(decrypt));
-    int de_stat = mcrypt_generic_init(decrypt, (void *)key, sizeof(key), (void *)deiv);
-    if(de_stat < 0){
-      fprintf(stderr, "Error using mcrypt_generic_init to initialize decryption session: %s/r/n", mcrypt_strerror(de_stat));
-      exit(1);
-    }
-    
-    atexit(crypt_closer);
-  }
-
   int in_closed = 0;
   for(;;){
     if(poll(pollfds, 2, 0) == -1){
@@ -202,16 +141,10 @@ int main(int argc, char **argv){
     }
     if(pollfds[0].revents & POLLIN){
       char buf[256];
-      int bytes = read(truefd, buf, 255);
+      int bytes = read(truefd, buf, 256);
       if(bytes == -1){
 	fprintf(stderr, "Error using read to read from socket: %s\r\n", strerror(errno));
 	exit(1);
-      }
-      if(keyfile != NULL){
-	if(mdecrypt_generic(decrypt, buf, bytes) != 0){
-	  fprintf(stderr, "Error using mdecrypt_generic to decrypt input\r\n");
-	  exit(1);
-	}
       }
       char shell_buf[256];
       int eof = 0;
@@ -249,7 +182,7 @@ int main(int argc, char **argv){
     }
     if(pollfds[1].revents & POLLIN){
       char buf[256];
-      int bytes = read(out_pipe[0], buf, 255);
+      int bytes = read(out_pipe[0], buf, 256);
       if(bytes == -1){
 	fprintf(stderr, "Error using read to read from pipe from shell output: %s\r\n", strerror(errno));
 	exit(1);
@@ -270,12 +203,6 @@ int main(int argc, char **argv){
 	  ech_buf[ech_bytes] = buf[i];
 	}
 	ech_bytes++;
-      }
-      if(keyfile != NULL){
-	if(mcrypt_generic(encrypt, ech_buf, ech_bytes) != 0){
-	  fprintf(stderr, "Error using mcrypt_generic to encrypt output\r\n");
-	  exit(1);
-	}
       }
       if(write(truefd, ech_buf, ech_bytes) == -1){
 	fprintf(stderr, "Error using write to write to socket: %s\r\n", strerror(errno));

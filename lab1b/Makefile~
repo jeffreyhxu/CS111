@@ -1,6 +1,3 @@
-#	NAME: Jeffrey Xu
-#	EMAIL: jeffreyhxu@gmail.com
-#	ID: 404768745
 all: client server
 
 client: lab1b-client

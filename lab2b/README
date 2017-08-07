@@ -28,7 +28,7 @@ target relies on my personal installation of pprof and is not usable by other
 accounts. graphs uses lab2b.gp on lab2b_list.csv to generate graphs lab2b_1.png
 through lab2b_5.png. dist creates the tarball. clean removes all files created
 by the Makefile, namely the object files and executable, lab2b_list.csv,
-profile.out, and all five graphs.
+profile.out, all five graphs, and the tarball.
 
 lab2b_list.csv contains the results of all test runs except the one used to
 create an execution profile for pprof.

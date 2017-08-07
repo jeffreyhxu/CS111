@@ -42,4 +42,6 @@ profile: lab2_list
 graphs: tests
 	./lab2b.gp
 dist: SortedList.h SortedList.c lab2_list.c Makefile lab2b_list.csv profile graphs lab2b.gp README
-	tar -czf lab2b-404768745.tar.gz
+	tar -czf lab2b-404768745.tar.gz SortedList.h SortedList.c lab2_list.c Makefile lab2b_list.csv profile.out lab2b_1.png lab2b_2.png lab2b_3.png lab2b_4.png lab2b_5.png lab2b.gp README
+clean:
+	rm -f SortedList.o lab2_list.o lab2_list lab2b_list.csv profile.out lab2b_1.png lab2b_2.png lab2b_3.png lab2b_4.png lab2b_5.png

@@ -2,7 +2,61 @@ NAME: Jeffrey Xu
 EMAIL: jeffreyhxu@gmail.com
 ID: 404768745
 
-files here
+The tarball contains SortedList.h, SortedList.c, lab2_list.c, Makefile,
+lab2b_list.csv, profile.out, lab2b_1.png, lab2b_2.png, lab2b_3.png, lab2b_4.png,
+lab2b_5.png, lab2b.gp, and README.
+
+SortedList.h is a header file provided by the assignment that contains
+interfaces for linked list operations.
+
+SortedList.c is the source for a C module that implements the insert, delete,
+lookup, and length methods described in the header. This file was copied from
+lab 2a.
+
+lab2_list.c is the source for a C program that behaves as described in the spec,
+using multiple threads to perform operations on a sorted linked list, with
+options available to change the number of threads and iterations, yield at
+specified points, use spinlocks or mutexes for synchronization, and partition
+the list. It reports the total time taken, average time per operation, and
+average wait time per lock.
+
+Makefile contains the default, tests, profile, graphs, dist, and clean targets.
+The default target builds lab2_list. tests runs the specified test cases and
+stores the output in lab2b_list.csv. profile runs a test using pprof to profile
+the performance of a spinlocked run, outputting profile.out. Note that this
+target relies on my personal installation of pprof and is not usable by other
+accounts. graphs uses lab2b.gp on lab2b_list.csv to generate graphs lab2b_1.png
+through lab2b_5.png. dist creates the tarball. clean removes all files created
+by the Makefile, namely the object files and executable, lab2b_list.csv,
+profile.out, and all five graphs.
+
+lab2b_list.csv contains the results of all test runs except the one used to
+create an execution profile for pprof.
+
+profile.out is an execution profiling report showing where time was spent by
+an un-partitioned, spinlocked run. It shows the report for the whole program as
+well as which lines in the spinlock function used the most time.
+
+lab2b_1.png shows throughput vs number of threads for mutex and spinlock
+synchronized list operations. Note that in this and graphs 4 and 5, throughput
+is not adjusted for increasing list length.
+
+lab2b_2.png shows mean time per mutex wait and mean time per operation for mutex
+synchronized list operations.
+
+lab2b_3.png shows successful iterations vs threads for each synchronization
+method.
+
+lab2b_4.png shows throughput vs number of threads for mutex synchronized
+partitioned lists.
+
+lab2b_5.png shows throughput vs number of threads for spinlock synchronized
+partitioned lists.
+
+lab2b.gp uses gnuplot to generate the above five graphs from lab2_list.csv.
+
+README contains descriptions of each included files and brief answers to each of
+the questions in the assignment.
 
 QUESTION 2.3.1 - Cycles in the basic list implementation:
 	 Where do you believe most of the cycles are spent in the 1 and 2-thread

@@ -1,0 +1,49 @@
+Total: 3848 samples
+    3734  97.0%  97.0%     3734  97.0% spinlock
+      88   2.3%  99.3%       99   2.6% SortedList_lookup
+      22   0.6%  99.9%       22   0.6% __strcmp_sse42
+       2   0.1%  99.9%       14   0.4% SortedList_insert
+       1   0.0% 100.0%     3848 100.0% __clone
+       1   0.0% 100.0%        1   0.0% _init
+       0   0.0% 100.0%     3847 100.0% start_thread
+       0   0.0% 100.0%     3847 100.0% thread_list
+ROUTINE ====================== spinlock in /u/cs/ugrad/hsinping/CS111/lab2b/lab2_list.c
+  3734   3734 Total samples (flat / cumulative)
+     .      .   18: int opt_sync = 0;
+     .      .   19: #define MUTE_SYNC	1
+     .      .   20: #define SPIN_SYNC	2
+     .      .   21: 
+     .      .   22: int spinlocker = 0;
+---
+     .      .   23: void spinlock(){
+     .      .   24:   int locked;
+     .      .   25:   do{
+  3681   3681   26:     locked = __sync_lock_test_and_set(&spinlocker, 1);
+    53     53   27:   } while(locked);
+     .      .   28: }
+---
+     .      .   29: 
+     .      .   30: void spinunlock(){
+     .      .   31:   __sync_lock_release(&spinlocker);
+     .      .   32: }
+     .      .   33: 
+ROUTINE ====================== spinlock in /u/cs/ugrad/hsinping/CS111/lab2b/lab2_list.c
+  3734   3734 Total samples (flat / cumulative)
+     .      .   18: int opt_sync = 0;
+     .      .   19: #define MUTE_SYNC	1
+     .      .   20: #define SPIN_SYNC	2
+     .      .   21: 
+     .      .   22: int spinlocker = 0;
+---
+     .      .   23: void spinlock(){
+     .      .   24:   int locked;
+     .      .   25:   do{
+  3681   3681   26:     locked = __sync_lock_test_and_set(&spinlocker, 1);
+    53     53   27:   } while(locked);
+     .      .   28: }
+---
+     .      .   29: 
+     .      .   30: void spinunlock(){
+     .      .   31:   __sync_lock_release(&spinlocker);
+     .      .   32: }
+     .      .   33: 

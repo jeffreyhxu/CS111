@@ -1,0 +1,83 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+files here
+
+QUESTION 2.3.1 - Cycles in the basic list implementation:
+	 Where do you believe most of the cycles are spent in the 1 and 2-thread
+	 list tests?
+	 I believe most of the cycles are spent actually running the operations
+	 on the list, specifically loading the pointers to the next elements in
+	 the traversals required by insertion, lookup, and length.
+	 Why do you believe these to be the most expensive parts of the code?
+	 The locks should not take much time because they don't need to wait for
+	 many other threads, either none or 1. Even with zero lock overhead, the
+	 throughput is expected to drop linearly as each operation takes longer
+	 on longer lists. Traversing the list requires the most load operations
+	 of any of the used list operations, so it is expected to take the most
+	 time without much lock overhead.
+	 Where do you believe most of the time/cycles are being spent in the
+	 high-thread spin-lock tests?
+	 I believe most of the cycles are being spent spinning while waiting for
+	 the thread in the critical section.
+	 Where do you believe most of the time/cycles are being spent in the
+	 high-thread mutext tests?
+	 I still believe most of the time is being spent on the list operations,
+	 as the decrease in throughput is close to that expected from having
+	 longer lists, but with more threads waiting, locking and unlocking may
+	 take more time as the waiting lists get longer.
+
+QUESTION 2.3.2 - Execution Profiling:
+	 Where (what lines of code) are consuming most of the cycles when the
+	 spin-lock version of the list exerciser is run with a large number of
+	 threads?
+	 The spin-lock function is consuming the most cycles, specifically the
+	 atomic test-and-set operation that repeatedly sets the lock to 1.
+	 Why does this operation become so expensive with large numbers of
+	 threads?
+	 This operation consumes the most time for two reasons. First, with more
+	 threads competing to use the list, each thread has to wait longer on
+	 average in the spinlock before it gets to progress. More threads
+	 waiting means a lower probability for each of them to progress, since
+	 only one can progress into the critical section at a time. Secondly,
+	 while that explains why the spin-lock loop takes the large majority of
+	 the time, it does not explain why the test-and-set takes so much more
+	 time than the conditional. This is because the test-and-set, being
+	 before-and-after atomic, must be completely serialized across all
+	 processors. While checking the value of locked can be done on every
+	 processor simultaneously, only one processor can execute a test-and-set
+	 on locked at a time. The effect of this serialization grows with the
+	 number of threads contending for the use of the shared variable.
+
+QUESTION 2.3.3 - Mutex Wait Time:
+	 Look at the average time per operation (vs # threads) and the average
+	 wait-for-mutex time (vs # threads).
+	 Why does the average lock-wait time rise so dramatically with the
+	 number of contending threads?
+	 As the number of contending threads goes up, each thread either has a
+	 higher probability of having to wait for another thread to exit the
+	 critical section or has to wait in a longer queue of threads all
+	 waiting for the same lock.
+	 Why does the completion time per operation rise (less dramatically)
+	 with the number of contending threads?
+	 The time taken per operation increases both because the list is longer
+	 with more threads and thus a longer list, and because more threads
+	 means a higher probability of waiting on lock acquisition instead of
+	 passing through, which incurs less cost.
+	 How is it possible for the wait time per operation to go up faster (or
+	 higher) than the completion time per operation?
+	 The wait time per operation is summed across all threads, while the
+	 completion time per operation benefits from having multiple processors
+	 running different threads at once. If a completely serial process is
+	 split up across multiple threads with no overhead incurred by locks,
+	 the wait time will go up while the completion time will stay constant.
+	 In addition, wait time is influenced both by how long it takes for each
+	 thread to complete an operation, relinquishing its lock, and by how
+	 many threads' completion must be waited for by any one thread, whereas
+	 completion time is only influenced by the former.
+
+QUESTION 2.3.4 - Performance of Partitioned Lists
+	 Explain the change in performance of the synchronized methods as a
+	 function of the number of lists.
+	 Performance increases as the nu

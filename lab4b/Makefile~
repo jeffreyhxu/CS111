@@ -1,0 +1,17 @@
+#	Name: Jeffrey Xu
+#	Email: jeffreyhxu@gmail.com
+#	ID: 404768745
+all: lab4b
+
+lab4b: lab4b.c
+	if uname -f | grep -q "edison" ; \
+	then \
+		gcc -g -Wall lab4b.c -o lab4b -lmraa ; \
+	else \
+		gcc -g -Wall lab4b.c -o lab4b -DDUMMY ; \
+	fi
+check: lab4b
+
+clean:
+
+dist:

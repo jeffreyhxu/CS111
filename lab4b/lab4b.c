@@ -49,6 +49,25 @@ void interrupter(int sig){
   running = 0;
 }
 
+char *formatted_time(){
+  struct timespec now;
+  if(clock_gettime(CLOCK_REALTIME, &now) == -1){
+    fprintf(stderr, "Error using clock_gettime to get time: %s\n", strerror(errno));
+    exit(1);
+  }
+  struct tm *localnow = localtime(&(now.tv_sec));
+  if(localnow == NULL){
+    fprintf(stderr, "Error using localtime to get local time: %s\n", strerror(errno));
+    exit(1);
+  }
+  char *result = malloc(10);
+  if(!strftime(result, 10, "%T", localnow)){
+    fprintf(stderr, "Error using strftime to format time: %s\n", strerror(errno));
+    exit(1);
+  }
+  return result;
+}
+
 int main(int argc, char **argv){
   struct option lopts[4] =
     {
@@ -104,14 +123,24 @@ int main(int argc, char **argv){
     fprintf(stderr, "Error using mraa_gpio_init to initialize context for button reading\n");
     exit(1);
   }
+
+  if(fcntl(0, F_SETFL, O_NONBLOCK) == -1){
+    fprintf(stderr, "Error using fcntl to make stdin non-blocking: %s\n", strerror(errno));
+    exit(1);
+  }
+  char combuf[32];
+  memset(combuf, 0, 32);
+  int bufsize = 0;
   
   signal(SIGALRM, ringer);
   ringer(SIGALRM);
 
   signal(SIGINT, interrupter);
-  
+
+  int unstopped = 1;
+  int off = 0;
   while(running){
-    if(sample){
+    if(sample && unstopped){
       int rawtemp = mraa_aio_read(adc_a0);
       if(rawtemp == -1){
 	fprintf(stderr, "Error using mraa_aio_read to get temperature reading\n");
@@ -121,31 +150,64 @@ int main(int argc, char **argv){
       double temperature = 1.0 / (log(R) / B + 1 / 298.15) - 273.15;
       if(scale == SCALE_F)
 	temperature = temperature * 1.8 + 32;
-      struct timespec now;
-      if(clock_gettime(CLOCK_REALTIME, &now) == -1){
-	fprintf(stderr, "Error using clock_gettime to get time: %s\n", strerror(errno));
-	exit(1);
-      }
-      printf("%s %.1f\n", ctime(&(now.tv_sec)), temperature);
+      char *time = formatted_time();
+      printf("%s %.1f\n", time, temperature);
       if(logfile != NULL)
-	fprintf(logfile, "%s %.1f\n", ctime(&(now.tv_sec)), temperature);
+	fprintf(logfile, "%s %.1f\n", time, temperature);
+      free(time);
       sample = 0;
     }
 
+    int rsize = read(0, combuf + bufsize, 31 - bufsize);
+    if(rsize == -1 && errno != EAGAIN){
+      fprintf(stderr, "Error using read to get command from terminal: %s\n", strerror(errno));
+      exit(1);
+    }
+    if(rsize > 0){
+      bufsize += rsize;
+      for(int i = 0; i < bufsize; i++){
+	if(combuf[i] == '\n'){
+	  combuf[i] = '\0';
+	  if(!strncmp(combuf, "SCALE=", 6) && strlen(combuf) == 7){
+	    if(combuf[6] == 'C')
+	      scale = SCALE_C;
+	    else if(combuf[6] == 'F')
+	      scale = SCALE_F;
+	    printf("new scale: %c\n", combuf[6]);
+	  }
+	  else if(!strncmp(combuf, "PERIOD=", 7)){
+	    if(atoi(combuf + 7) > 0)
+	      period = atoi(combuf + 7);
+	    printf("new period: %i\n", atoi(combuf + 7));
+	  }
+	  else if(!strcmp(combuf, "STOP"))
+	    unstopped = 0;
+	  else if(!strcmp(combuf, "START"))
+	    unstopped = 1;
+	  else if(!strcmp(combuf, "OFF"))
+	    off = 1;
+	  bufsize = 32;
+	  break;
+	}
+      }
+      //printf("combuf: %s\nbufsize: %i\n", combuf, bufsize);
+      if(bufsize >= 31){
+	memset(combuf, 0, 32);
+	bufsize = 0;
+      }
+    }
+      
     int button = mraa_gpio_read(gpio_d3);
     if(button == -1){
       fprintf(stderr, "Error using mraa_gpio_read to get button reading\n");
       exit(1);
     }
-    else if(button == 1){
-      struct timespec now;
-      if(clock_gettime(CLOCK_REALTIME, &now) == -1){
-	fprintf(stderr, "Error using clock_gettime to get time: %s\n", strerror(errno));
-	exit(1);
-      }
-      printf("%s SHUTDOWN", ctime(&(now.tv_sec)));
+    else if(button || off){
+      char *time = formatted_time();
+      printf("%s SHUTDOWN", time);
       if(logfile != NULL)
-	fprintf(logfile, "%s SHUTDOWN", ctime(&(now.tv_sec)));
+	fprintf(logfile, "%s SHUTDOWN", time);
+      free(time);
       break;
     }
   }

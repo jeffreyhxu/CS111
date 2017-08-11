@@ -1,0 +1,23 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+The tarball contains lab4b.c, Makefile, and README.
+
+lab4b.c is the source file for an embedded application for an Intel Edison that
+regularly reports the temperature detected by the temperature sensor. It takes
+options to choose the temperature scale, frequency of samples, and log file.
+While running, it takes commands to adjust temperature scale, adjust frequency
+of samples, suspend sampling, continue sampling, and stop the program. In
+addition, pressing the button also stops the program.
+
+Makefile supports the default target, check, clean, and dist. The default target
+builds lab4b. If it is run on anything other than an Edison, it will pass the
+-DDUMMY flag to gcc, causing lab4b to be built with dummy implementations of the
+functions that read from the sensors. check runs a quick smoke test to make sure
+lab4b correctly reports a time and a temperature, as well as correctly responds
+to the OFF command, even after a long string of other commands. clean deletes
+all files created by the Makefile, namely lab4b and the tarball. It won't delete
+any log files created by the user. dist creates the tarball.
+
+README contains descriptions of the included files.

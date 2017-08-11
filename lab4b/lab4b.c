@@ -38,24 +38,13 @@ int mraa_gpio_read(mraa_aio_context a){
 #define SCALE_F 1
 const int B = 4275;
 
-int period = 1, sample = 0;
-void ringer(int sig){
-  sample = 1;
-  alarm(period);
-}
-
 int running = 1;
 void interrupter(int sig){
   running = 0;
 }
 
-char *formatted_time(){
-  struct timespec now;
-  if(clock_gettime(CLOCK_REALTIME, &now) == -1){
-    fprintf(stderr, "Error using clock_gettime to get time: %s\n", strerror(errno));
-    exit(1);
-  }
-  struct tm *localnow = localtime(&(now.tv_sec));
+char *formatted_time(time_t now){
+  struct tm *localnow = localtime(&now);
   if(localnow == NULL){
     fprintf(stderr, "Error using localtime to get local time: %s\n", strerror(errno));
     exit(1);
@@ -76,7 +65,7 @@ int main(int argc, char **argv){
       {"log", required_argument, NULL, 3},
       {0,0,0,0}
     };
-  int opti, scale = SCALE_F;
+  int opti, scale = SCALE_F, period = 1;
   FILE *logfile = NULL;
   for(;;){
     int opt_stat = getopt_long(argc, argv, "", lopts, &opti);
@@ -128,19 +117,23 @@ int main(int argc, char **argv){
     fprintf(stderr, "Error using fcntl to make stdin non-blocking: %s\n", strerror(errno));
     exit(1);
   }
-  char combuf[32];
+  char *combuf = malloc(32);
   memset(combuf, 0, 32);
   int bufsize = 0;
-  
-  signal(SIGALRM, ringer);
-  ringer(SIGALRM);
 
   signal(SIGINT, interrupter);
 
   int unstopped = 1;
   int off = 0;
+  time_t prev = 0;
   while(running){
-    if(sample && unstopped){
+    time_t now = time(NULL);
+    if(now == (time_t) -1){
+      fprintf(stderr, "Error using time to get time: %s\n", strerror(errno));
+      exit(1);
+    }
+    if(now - prev >= period && unstopped){
+      prev = now;
       int rawtemp = mraa_aio_read(adc_a0);
       if(rawtemp == -1){
 	fprintf(stderr, "Error using mraa_aio_read to get temperature reading\n");
@@ -150,12 +143,11 @@ int main(int argc, char **argv){
       double temperature = 1.0 / (log(R) / B + 1 / 298.15) - 273.15;
       if(scale == SCALE_F)
 	temperature = temperature * 1.8 + 32;
-      char *time = formatted_time();
+      char *time = formatted_time(now);
       printf("%s %.1f\n", time, temperature);
       if(logfile != NULL)
 	fprintf(logfile, "%s %.1f\n", time, temperature);
       free(time);
-      sample = 0;
     }
 
     int rsize = read(0, combuf + bufsize, 31 - bufsize);
@@ -163,34 +155,52 @@ int main(int argc, char **argv){
       fprintf(stderr, "Error using read to get command from terminal: %s\n", strerror(errno));
       exit(1);
     }
-    if(rsize > 0){
+    if(rsize > 0 || bufsize > 0){
       bufsize += rsize;
+      //fprintf(stderr, "rsize: %i\ncombuf befor: %s\nbufsize: %i\n", rsize, combuf, bufsize);
       for(int i = 0; i < bufsize; i++){
 	if(combuf[i] == '\n'){
 	  combuf[i] = '\0';
 	  if(!strncmp(combuf, "SCALE=", 6) && strlen(combuf) == 7){
-	    if(combuf[6] == 'C')
+	    if(combuf[6] == 'C'){
 	      scale = SCALE_C;
-	    else if(combuf[6] == 'F')
+	      fprintf(logfile, "SCALE=C\n");
+	    }
+	    else if(combuf[6] == 'F'){
 	      scale = SCALE_F;
-	    printf("new scale: %c\n", combuf[6]);
+	      fprintf(logfile, "SCALE=F\n");
+	    }
+	    //fprintf(stderr, "new scale: %c\n", combuf[6]);
 	  }
 	  else if(!strncmp(combuf, "PERIOD=", 7)){
-	    if(atoi(combuf + 7) > 0)
+	    if(atoi(combuf + 7) > 0){
 	      period = atoi(combuf + 7);
-	    printf("new period: %i\n", atoi(combuf + 7));
+	      fprintf(logfile, "PERIOD=%d\n", atoi(combuf+7));
+	    }
+	    //fprintf(stderr, "new period: %i\n", atoi(combuf + 7));
 	  }
-	  else if(!strcmp(combuf, "STOP"))
+	  else if(!strcmp(combuf, "STOP")){
 	    unstopped = 0;
-	  else if(!strcmp(combuf, "START"))
+	    fprintf(logfile, "STOP\n");
+	  }
+	  else if(!strcmp(combuf, "START")){
 	    unstopped = 1;
-	  else if(!strcmp(combuf, "OFF"))
+	    fprintf(logfile, "START\n");
+	  }
+	  else if(!strcmp(combuf, "OFF")){
 	    off = 1;
-	  bufsize = 32;
+	    fprintf(logfile, "OFF\n");
+	  }
+	  char *newbuf = malloc(32);
+	  memset(newbuf, 0, 32);
+	  memcpy(newbuf, combuf + i + 1, 31 - i);
+	  free(combuf);
+	  combuf = newbuf;
+	  bufsize = bufsize - i - 1;
 	  break;
 	}
       }
-      //printf("combuf: %s\nbufsize: %i\n", combuf, bufsize);
+      //fprintf(stderr, "combuf after: %s\nbufsize: %i\n", combuf, bufsize);
       if(bufsize >= 31){
 	memset(combuf, 0, 32);
 	bufsize = 0;
@@ -203,12 +213,12 @@ int main(int argc, char **argv){
       exit(1);
     }
     else if(button || off){
-      char *time = formatted_time();
-      printf("%s SHUTDOWN", time);
+      char *time = formatted_time(now);
+      printf("%s SHUTDOWN\n", time);
       if(logfile != NULL)
-	fprintf(logfile, "%s SHUTDOWN", time);
+	fprintf(logfile, "%s SHUTDOWN\n", time);
       free(time);
-      break;
+      running = 0;
     }
   }
   if(logfile != NULL)

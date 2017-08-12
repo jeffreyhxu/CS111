@@ -164,32 +164,38 @@ int main(int argc, char **argv){
 	  if(!strncmp(combuf, "SCALE=", 6) && strlen(combuf) == 7){
 	    if(combuf[6] == 'C'){
 	      scale = SCALE_C;
-	      fprintf(logfile, "SCALE=C\n");
+	      if(logfile != NULL)
+		fprintf(logfile, "SCALE=C\n");
 	    }
 	    else if(combuf[6] == 'F'){
 	      scale = SCALE_F;
-	      fprintf(logfile, "SCALE=F\n");
+	      if(logfile != NULL)
+		fprintf(logfile, "SCALE=F\n");
 	    }
 	    //fprintf(stderr, "new scale: %c\n", combuf[6]);
 	  }
 	  else if(!strncmp(combuf, "PERIOD=", 7)){
 	    if(atoi(combuf + 7) > 0){
 	      period = atoi(combuf + 7);
-	      fprintf(logfile, "PERIOD=%d\n", atoi(combuf+7));
+	      if(logfile != NULL)
+		fprintf(logfile, "PERIOD=%d\n", atoi(combuf+7));
 	    }
 	    //fprintf(stderr, "new period: %i\n", atoi(combuf + 7));
 	  }
 	  else if(!strcmp(combuf, "STOP")){
 	    unstopped = 0;
-	    fprintf(logfile, "STOP\n");
+	    if(logfile != NULL)
+	      fprintf(logfile, "STOP\n");
 	  }
 	  else if(!strcmp(combuf, "START")){
 	    unstopped = 1;
-	    fprintf(logfile, "START\n");
+	    if(logfile != NULL)
+	      fprintf(logfile, "START\n");
 	  }
 	  else if(!strcmp(combuf, "OFF")){
 	    off = 1;
-	    fprintf(logfile, "OFF\n");
+	    if(logfile != NULL)
+	      fprintf(logfile, "OFF\n");
 	  }
 	  char *newbuf = malloc(32);
 	  memset(newbuf, 0, 32);

@@ -1,0 +1,16 @@
+/* Name: Jeffrey Xu
+ * Email: jeffreyhxu@gmail.com
+ * ID: 404768745
+ */
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include "ext2_fs.h"
+
+int main(int argc, char **argv){
+  for(int i = 0; i < argc; i++){
+    printf("%s\n", argv[i]);
+  }
+}

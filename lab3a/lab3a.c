@@ -113,9 +113,11 @@ int main(int argc, char **argv){
 	/* INODE,inode number,file type,mode,owner,group,link count,time of last
 	   inode change,modification time,time of last access,file size,number
 	   of blocks,block addresses (15) */
-	printf("INODE,%d,%c,0%o,%d,%d,%d,%s,%s,%s,%d,%d", i + g * sb.s_inodes_per_group + 1, filetype, inode.i_mode & 0xFFF, inode.i_uid, inode.i_gid, inode.i_links_count, inode.i_mtime > inode.i_atime ? modtime : acctime, modtime, acctime, inode.i_size, inode.i_blocks);
+	printf("INODE,%d,%c,%o,%d,%d,%d,%s,%s,%s,%d,%d", i + g * sb.s_inodes_per_group + 1, filetype, inode.i_mode & 0xFFF, inode.i_uid, inode.i_gid, inode.i_links_count, inode.i_mtime > inode.i_atime ? modtime : acctime, modtime, acctime, inode.i_size, inode.i_blocks);
 	for(int block = 0; block < EXT2_N_BLOCKS; block++){
 	  printf(",%d", inode.i_block[block]);
+	  if(filetype == 's')
+	    break;
 	}
 	printf("\n");
 	free(modtime);

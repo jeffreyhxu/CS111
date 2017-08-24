@@ -116,9 +116,11 @@ int main(int argc, char *argv[]){
 	iss.ignore(1, ',');
 	used_inodes.insert(inum);
 	i_ref_count[inum] = lcount;
-	for(int b = 0; b < min(12, fsize / b_size); b++){
+	//cerr << "Inode " << inum << ": ";
+	for(int b = 0; b < 12; b++){
 	  int db;
 	  iss >> db;
+	  //cerr << db << ", ";
 	  if(db == 0){}
 	  else if(db < 0 || db >= b_count)
 	    cout << "INVALID BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << b << endl;
@@ -127,7 +129,7 @@ int main(int argc, char *argv[]){
 	  else{
 	    map<int, string>::iterator used = used_blocks.find(db);
 	    if(used != used_blocks.end()){
-	      if(!(*used).second.compare("Printed")){
+	      if((*used).second.compare("Printed")){
 		cout << (*used).second;
 		(*used).second = "Printed";
 	      }
@@ -144,9 +146,10 @@ int main(int argc, char *argv[]){
 	    break;
 	  iss.ignore(1, ',');
 	}
-	if(ftype != 's' && fsize / b_size > 12){
+	if(ftype != 's'/* && fsize / b_size > 12*/){
 	  int db;
 	  iss >> db;
+	  //cerr << db << ", ";
 	  iss.ignore(1, ',');
 	  if(db == 0){}
 	  else if(db < 0 || db >= b_count)
@@ -156,7 +159,7 @@ int main(int argc, char *argv[]){
 	  else{
 	    map<int, string>::iterator used = used_blocks.find(db);
 	    if(used != used_blocks.end()){
-	      if(!(*used).second.compare("Printed")){
+	      if((*used).second.compare("Printed")){
 		cout << (*used).second;
 		(*used).second = "Printed";
 	      }
@@ -170,9 +173,10 @@ int main(int argc, char *argv[]){
 	    }
 	  }
 	}
-	if(ftype != 's' && fsize / b_size > 12 + b_size / 4){
+	if(ftype != 's'/* && fsize / b_size > 12 + b_size / 4*/){
 	  int db;
 	  iss >> db;
+	  //cerr << "db, ";
 	  iss.ignore(1, ',');
 	  if(db == 0){}
 	  else if(db < 0 || db >= b_count)
@@ -182,7 +186,7 @@ int main(int argc, char *argv[]){
 	  else{
 	    map<int, string>::iterator used = used_blocks.find(db);
 	    if(used != used_blocks.end()){
-	      if(!(*used).second.compare("Printed")){
+	      if((*used).second.compare("Printed")){
 		cout << (*used).second;
 		(*used).second = "Printed";
 	      }
@@ -196,32 +200,34 @@ int main(int argc, char *argv[]){
 	    }
 	  }
 	}
-	if(ftype != 's' && fsize / b_size > 12 + b_size / 4 + (b_size / 4) * (b_size / 4)){
+	if(ftype != 's'/* && fsize / b_size > 12 + b_size / 4 + (b_size / 4) * (b_size / 4)*/){
 	  int db;
 	  iss >> db;
+	  //cerr << db << ", ";
 	  iss.ignore(1, ',');
 	  if(db == 0){}
 	  else if(db < 0 || db >= b_count)
-	    cout << "INVALID TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	    cout << "INVALID TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	  else if(db <= inodes_end)
-	    cout << "RESERVED TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	    cout << "RESERVED TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	  else{
 	    map<int, string>::iterator used = used_blocks.find(db);
 	    if(used != used_blocks.end()){
-	      if(!(*used).second.compare("Printed")){
+	      if((*used).second.compare("Printed")){
 		cout << (*used).second;
 		(*used).second = "Printed";
 	      }
-	      cout << "DUPLICATE TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	      cout << "DUPLICATE TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	    }
 	    else{
 	      oss.str("");
-	      oss << "DUPLICATE TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	      oss << "DUPLICATE TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	      used_blocks[db] = oss.str();
 	      oss.str("");
 	    }
 	  }
 	}
+	//cerr << endl;
       }
       else if(!line.compare(0, 7, "DIRENT,")){
 	int diri, refi;
@@ -235,17 +241,17 @@ int main(int argc, char *argv[]){
 	iss.ignore(100, ','); // entry length
 	iss.ignore(100, ','); // name length
 	iss >> refname;
-	refname = refname.substr(1, refname.length() - 2);
+	//refname = refname.substr(1, refname.length() - 2);
 	d_ref_count[refi]++;
 	pair<int, string> pdi;
 	pdi.first = diri;
 	pdi.second = refname;
 	dirents[refi] = pdi;
-	if(!refname.compare(".")){
+	if(!refname.compare("'.'")){
 	  if(refi != diri)
 	    cout << "DIRECTORY INODE " << diri << " NAME '.' LINK TO INODE " << refi << " SHOULD BE " << diri << endl;
 	}
-	else if(!refname.compare("..")){
+	else if(!refname.compare("'..'")){
 	  if(parent.find(diri) == parent.end())
 	    parent[diri] = refi;
 	  else if(parent[diri] != refi)
@@ -290,7 +296,7 @@ int main(int argc, char *argv[]){
 	else{
 	  map<int, string>::iterator used = used_blocks.find(db);
 	  if(used != used_blocks.end()){
-	    if(!(*used).second.compare("Printed")){
+	    if((*used).second.compare("Printed")){
 	      cout << (*used).second;
 	      (*used).second = "Printed";
 	    }
@@ -315,6 +321,12 @@ int main(int argc, char *argv[]){
     if(free && used)
       cout << "ALLOCATED BLOCK " << block << " ON FREELIST" << endl;
   }
+  bool free2 = (free_inodes.find(2) != free_inodes.end());
+  bool used2 = (used_inodes.find(2) != used_inodes.end());
+  if(!free2 && !used2)
+    cout << "UNALLOCATED INODE 2 NOT ON FREELIST" << endl;
+  if(free2 && used2)
+    cout << "ALLOCATED INODE 2 ON FREELIST" << endl;
   for(int inode = inode_1; inode <= i_count; inode++){
     bool free = (free_inodes.find(inode) != free_inodes.end());
     bool used = (used_inodes.find(inode) != used_inodes.end());

@@ -1,0 +1,48 @@
+/* Name: Jeffrey Xu
+ * Email: jeffreyhxu@gmail.com
+ * ID: 404768745
+ */
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <set>
+#include <map>
+using namespace std;
+
+int main(int argc, char *argv[]){
+  if(argc != 2){
+    cerr << "Usage: lab3b filename" << endl;
+    exit(1);
+  }
+  ifstream file;
+  file.open(argv[1]);
+  if(!file){
+    cerr << "Error: Unable to open " << argv[1] << endl;
+    exit(1);
+  }
+
+  bool super_found = false;
+  int block_count;
+  set<int> reserved_blocks;
+  set<int> free_blocks;
+  map<int, string> used_blocks;
+  
+  string line;
+  while(getline(file, line)){
+    if(!super_found){
+      if(!line.compare(0, 11, "SUPERBLOCK,")){
+	line >> block_count;
+	super_found = true;
+	//back to start
+	file.seekg(0);
+      }
+    }
+    else{
+      //do actual stuff
+    }
+  }
+  
+  file.close();
+}
+
+  

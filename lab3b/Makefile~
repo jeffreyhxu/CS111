@@ -1,0 +1,7 @@
+#	Name: Jeffrey Xu
+#	Email: jeffreyhxu@gmail.com
+#	ID: 404768745
+all: lab3b
+
+lab3b: lab3b.c
+	g++ -g -Wall lab3b.cpp -o lab3b

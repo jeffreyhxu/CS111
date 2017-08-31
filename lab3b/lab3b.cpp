@@ -207,9 +207,9 @@ int main(int argc, char *argv[]){
 	  iss.ignore(1, ',');
 	  if(db == 0){}
 	  else if(db < 0 || db >= b_count)
-	    cout << "INVALID TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	    cout << "INVALID TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	  else if(db <= inodes_end)
-	    cout << "RESERVED TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	    cout << "RESERVED TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	  else{
 	    map<int, string>::iterator used = used_blocks.find(db);
 	    if(used != used_blocks.end()){
@@ -217,11 +217,11 @@ int main(int argc, char *argv[]){
 		cout << (*used).second;
 		(*used).second = "Printed";
 	      }
-	      cout << "DUPLICATE TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	      cout << "DUPLICATE TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	    }
 	    else{
 	      oss.str("");
-	      oss << "DUPLICATE TRIPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
+	      oss << "DUPLICATE TRIPPLE INDIRECT BLOCK " << db << " IN INODE " << inum << " AT OFFSET " << 12 + b_size / 4 + (b_size / 4) * (b_size / 4) << endl;
 	      used_blocks[db] = oss.str();
 	      oss.str("");
 	    }

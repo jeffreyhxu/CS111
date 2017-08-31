@@ -1,37 +1,32 @@
 #!/bin/bash
 #
 # sanity check script for Project 3B
-#	extract tar file
-#	required README fields (ID, EMAIL, NAME)
-#	required Makefile targets (clean, dist, graphs, tests)
-#	make default
+#	tarball name
+#	tarball contents
+#	student identification 
+#	makefile targets
+#	error free build
+#	make clean
 #	make dist
-#	make clean (returns directory to untared state)
-#	make default, success, creates program
-#	unrecognized parameters
-#	error message for nonexistent input file
-#	identical output for trivial test case
+#	make (default again)
+#	usage message for bogus args
+#	error message for nonexistent iput file
+#
+#	identical output for supplied test cases
 #
 LAB="lab3b"
 README="README"
 MAKEFILE="Makefile"
-
-EXPECTED=""
+BASE="http://web.cs.ucla.edu/classes/spring17/cs111/projects"
+TESTS=22
 EXPECTEDS=""
-PGM="lab3b"
+
+FILEBASE=`pwd`/../../P3B_analyze/GRADING
+
+PGM=./lab3b
 PGMS="$PGM"
 
-SUFFIXES=""
-
-LIBRARY_URL="www.cs.ucla.edu/classes/cs111/Software"
-PROJECT_URL="www.cs.ucla.edu/classes/cs111/Samples"
-
-EXIT_OK=0
-EXIT_ARG=1
-EXIT_ERR=2
-
 TIMEOUT=1
-MIN_TESTS=20
 
 let errors=0
 
@@ -51,176 +46,244 @@ then
 	exit 1
 fi
 
-# get copy of our grading/checking functions
-if [ -s functions.sh ]; then
-	source functions.sh
-else
-	wget $LIBRARY_URL/functions.sh 2> /dev/null
-	if [ $? -eq 0 ]; then
-		>&2 echo "Downloading functions.sh from $LIBRARY_URL"
-		source functions.sh
-	else
-		>&2 echo "FATAL: unable to pull test functions from $LIBRARY_URL"
-		exit -1
-	fi
+# make sure we can untar it
+TEMP="/tmp/TestTemp.$$"
+echo "... Using temporary testing directory" $TEMP
+function cleanup {
+	cd
+	rm -rf $TEMP
+	exit $1
+}
+
+mkdir $TEMP
+cp $tarball $TEMP
+cd $TEMP
+echo "... untaring" $tarball
+tar xvf $tarball
+if [ $? -ne 0 ]
+then
+	echo "ERROR: Error untarring $tarball"
+	cleanup 1
 fi
 
-# read the tarball into a test directory
-TEMP="/tmp/TestTemp.$$"
-mkdir $TEMP
-unTar $LAB $student $TEMP
-cd $TEMP
+# make sure we find all the expected files
+echo "... checking for expected files"
+for i in $README $MAKEFILE
+do
+	if [ ! -s $i ]
+	then
+		echo "ERROR: unable to find file" $i
+		let errors+=1
+	else
+		echo "        $i ... OK"
+	fi
+done
 
-# note the initial contents
-dirSnap $TEMP $$
+# make sure the README contains name and e-mail
+echo "... checking for submitter info in $README"
+function idString {
+	result=`grep $1 $README | cut -d: -f2 | tr -d \[:blank:\] | tr -d "\r"`
+	if [ -z "$result" ]
+	then
+		echo "ERROR - $README contains no $1";
+		let errors+=1
+	elif [ -z "$2" ]
+	then
+		# no match required
+		echo "        $1 ... $result"
+	else
+		f1=`echo $result | cut -f1 -d,`
+		f2=`echo $result | cut -f2 -d,`
+		if [ "$f1" == "$2" ]
+		then
+			echo "        $1 ... $f1"
+		elif [ -n "$f2" -a "$2" == "$f2" ]
+		then
+			echo "        $1 ... $f1,$f2"
+		else
+			echo "ERROR: $1 ($result) does not include $2"
+			let errors+=1
+		fi
+	fi
+}
 
-echo "... checking for README file"
-checkFiles $README
-let errors+=$?
+idString "NAME:"
+idString "EMAIL:"
+idString "ID:" $student
 
-echo "... checking for submitter ID in $README"
-ID=`getIDs $README $student`
-let errors+=$?
+function makeTarget {
+	result=`grep $1: $MAKEFILE`
+	if [ $? -ne 0 ]
+	then
+		echo "ERROR: no $1 target in $MAKEFILE"
+		let errors+=1
+	else
+		echo "        $1 ... OK"
+	fi
+}
 
-echo "... checking for submitter email in $README"
-EMAIL=`getEmail $README`
-let errors+=$?
-
-echo "... checking for submitter name in $README"
-NAME=`getName $README`
-let errors+=$?
-
-echo "... checking for other expected files"
-checkFiles $MAKEFILE $EXPECTED
-let errors+=$?
+echo "... checking for expected make targets"
+makeTarget "clean"
+makeTarget "dist"
 
 # make sure we find files with all the expected suffixes
-if [ -n "$SUFFIXES" ]; then
-	echo "... checking for source files"
-	let found=0
-	for s in $SUFFIXES
-	do
-		names=`echo *.$s`
-		if [ "$names" != '*'.$s ]; then
-			echo "    $names ... OK"
-			let found=1
-		fi
-	done
-	if [ $found -le 0 ]; then
-		echo "no C/C++ source files found"
+echo "... checking for other files of expected types"
+for s in $EXPECTEDS
+do
+	names=`echo *.$s`
+	if [ "$names" = '*'.$s ]
+	then
+		echo "ERROR: unable to find any .$s files"
 		let errors+=1
+	else
+		for f in $names
+		do
+			echo "        $f ... OK"
+		done
 	fi
-fi
-
-echo "... checking for required Make targets"
-checkTarget clean
-let errors+=$?
-checkTarget dist
-let errors+=$?
+done
 
 # make sure we can build the expected program
 echo "... building default target(s)"
 make 2> STDERR
-testRC $? 0
-let errors+=$?
-noOutput STDERR
-let errors+=$?
-
-echo "... deleting programs and data to force rebuild"
-rm -f $PGMS
-
-echo "... checking make dist"
-make dist 2> STDERR
-testRC $? 0
-let errors+=$?
-
-checkFiles $TARBALL
-if [ $? -ne 0 ]; then
-	echo "ERROR: make dist did not produce $tarball"
+RET=$?
+if [ $RET -ne 0 ]
+then
+	echo "ERROR: default make fails RC=$RET"
+	let errors+=1
+fi
+if [ -s STDERR ]
+then
+	echo "ERROR: make produced output to stderr"
+	cat STDERR
 	let errors+=1
 fi
 
-echo " ... checking make clean"
-rm -f STDERR
-make clean
-testRC $? 0
-let errors+=$?
-dirCheck $TEMP $$
-let errors+=$?
+# check a make clean (successful, deletes products)
+echo "... testing make clean"
+make clean 2> STDERR
+RET=$?
+if [ $RET -ne 0 ]
+then
+	echo "ERROR: make clean fails RC=$RET"
+	let errors+=1
+fi
+if [ -s STDERR ]
+then
+	echo "ERROR: make clean produced output to stderr"
+	let errors+=1
+fi
 
-#
-# now redo the default make and start testing functionality
-#
-echo "... redo default make"
-make 2> STDERR
-testRC $? 0
-let errors+=$?
-noOutput STDERR
-let errors+=$?
-
-echo "... checking for expected products"
-checkPrograms $PGMS
-let errors+=$?
-
-# see if they detect and report invalid arguments
-for p in $PGMS
+# check if a make clean eliminated all targets
+for t in $tarball
 do
-	echo "... $p detects/reports bogus arguments"
-	./$p --bogus < /dev/tty > /dev/null 2>STDERR
-	testRC $? $EXIT_ARG
-	if [ ! -s STDERR ]
+	if [ -s $t ]
 	then
-		echo "No Usage message to stderr for --bogus"
+		echo "ERROR: make clean leaves $t"
 		let errors+=1
-	else
-		echo -n "    "
-		cat STDERR
+	fi
+done
+for t in *.pyc *.o *.dSYM
+do
+	if [ -s $t ]
+	then
+		echo "ERROR: make clean leaves $t"
+		let errors+=1
 	fi
 done
 
-# make sure it detects a non-existent image
-echo "... $PGM detects/reports non-existent input image"
-rm -f STDERR
-./$PGM NO_SUCH_INPUT.img > /dev/null 2>STDERR
-if [ $? -eq 0 ]; then
-	echo "ERROR: non-existent input file returns 0"
-	let errors+=1
-else
-	echo "    RC!=0 ... OK"
-fi
-
-if [ ! -s STDERR ]
+# check if a make dist succeeds
+echo "... testing make dist"
+make dist 2> STDERR
+RET=$?
+if [ $RET -ne 0 ]
 then
-	echo "No error message to stderr for non-existent input file"
+	echo "ERROR: make dist fails RC=$RET"
 	let errors+=1
-else
-	echo -n "    "
-	cat STDERR
+fi
+if [ -s STDERR ]
+then
+	echo "ERROR: make dist produced output to stderr"
+	let errors+=1
 fi
 
-echo
-let b=1
-# run through all of the supplied test cases
-while :
+# check if a make dist creates the tarball
+if [ ! -s $tarball ]
+then
+	echo "ERROR: make dist does not produce $tarball"
+	let errors+=1
+fi
+
+# check a make after a make clean
+echo "... re-building default target(s)"
+make 2> STDERR
+RET=$?
+if [ $RET -ne 0 ]
+then
+	echo "ERROR: default make fails RC=$RET"
+	let errors+=1
+fi
+if [ -s STDERR ]
+then
+	echo "ERROR: make produced output to stderr"
+	let errors+=1
+fi
+
+echo "... checking for expected products"
+for p in $PGMS
 do
-	# download the samples and error output
+	if [ ! -x $p ]
+	then
+		echo "ERROR: unable to find expected executable" $p
+		let errors+=1
+	else
+		echo "        $p ... OK"
+	fi
+done
+
+#echo ... checking for expected usage
+#timeout $TIMEOUT $PGM > STDOUT 2> STDERR
+#if [ $? -ne 1 ]; then
+#	echo "ERROR: RC!=1 w/no args"
+#	let errors+=1
+#else
+#	echo "        RC=1 ... OK"
+#fi
+
+echo ... checking for handling of nonexistent image
+timeout $TIMEOUT $PGM NO_SUCH_FILE > STDOUT 2> STDERR
+if [ $? -eq 0 ]; then
+	echo "ERROR: no error w/invalid image"
+	let errors+=1
+elif [ ! -s STDERR ]; then
+	echo "ERROR: no usage message"
+	let errors+=1
+else
+	cat STDERR
+	echo "        RC!=0, error message ... OK"
+fi
+
+# see if we can download the test cases
+let b=0
+while [ $b -le $TESTS ]
+do
 	pfx="P3B-test_"
 	for s in csv err
 	do
-		f=$pfx$b.$s
-		wget $PROJECT_URL/$f > /dev/null 2> /dev/null
-		ret=$?
-		if [ $b -lt $MIN_TESTS -a $ret -ne 0 ]; then
-			echo "Unable to download testcase $f from $PROJECT_URL"
+		if [ -s $FILEBASE/$pfx$b.$s ]; then
+			cp $FILEBASE/$pfx$b.$s .
+			ret=$?
+		else
+			wget $BASE/$pfx$b.$s > /dev/null 2> /dev/null
+			ret=$?
+		fi
+		if [ $ret -ne 0 ]; then
+			echo "Unable to download testcase $f"
 		fi
 	done
-	if [ $ret -ne 0 ]; then
-		break;
-	fi
 
-	# run the program on the sample, and compare the output
 	echo "... executing test case $pfx$b"
-	timeout $TIMEOUT ./$PGM $pfx$b.csv | sort > TEST.out
+	timeout $TIMEOUT $PGM $pfx$b.csv | sort > TEST.out
 	sort $pfx$b.err > GOLDEN.out
 	cmp GOLDEN.out TEST.out
 	if [ $? -ne 0 ]; then
@@ -237,19 +300,14 @@ do
 	let b+=1
 done
 
+# that's all the tests I could think of
 echo
-echo "THE ONLY STUDENTS WHO WILL RECEIVE CREDIT FOR THIS SUBMISSION ARE:"
-commas=`echo $ID | tr -c -d "," | wc -c`
-let submitters=commas+1
-let f=1
-while [ $f -le $submitters ]
-do
-	id=`echo $ID | cut -d, -f$f`
-	mail=`echo $EMAIL | cut -d, -f$f`
-	echo "    $id    $mail"
-	let f+=1
-done
-echo
-
-# delete temp files, report errors, and exit
-cleanup $$ $errors
+if [ $errors -eq 0 ]; then
+	echo "SUBMISSION $tarball ... passes sanity check"
+	cleanup 0
+else
+	echo "SUBMISSION $tarball ... fails sanity check with $errors errors!"
+	echo
+	echo
+	cleanup -1
+fi

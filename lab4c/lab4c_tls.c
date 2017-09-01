@@ -16,7 +16,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <poll.h>
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
 
 #ifndef DUMMY
 #include <mraa/aio.h>
@@ -72,7 +73,7 @@ int main(int argc, char **argv){
       {"host", required_argument, NULL, 5},
       {0,0,0,0}
     };
-  int opti, scale = SCALE_F, period = 1, uid = 0, port = 18000;
+  int opti, scale = SCALE_F, period = 1, uid = 0, port = 19000;
   FILE *logfile = NULL;
   char *host = "lever.cs.ucla.edu";
   for(;;){
@@ -161,10 +162,18 @@ int main(int argc, char **argv){
     fprintf(stderr, "Error using connect to connect to server: %s\r\n", strerror(errno));
     exit(1);
   }
-  printf("\n"); // why is this necessary??
-  close(1);
-  dup(sockfd);
-  printf("ID=%09d\n", uid);
+  
+  SSL_library_init();
+  SSL_load_error_strings();
+  OpenSSL_add_all_algorithms();
+  SSL_CTX *context = SSL_CTX_new(TLSv1_client_method());
+  SSL *sslClient = SSL_new(context);
+  SSL_set_fd(sslClient, sockfd);
+  SSL_connect(sslClient);
+  
+  char buf[32];
+  sprintf(buf, "ID=%09d\n", uid);
+  SSL_write(sslClient, buf, strlen(buf));
 
   if(fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1){
     fprintf(stderr, "Error using fcntl to make socket non-blocking: %s\n", strerror(errno));
@@ -192,14 +201,14 @@ int main(int argc, char **argv){
       if(scale == SCALE_F)
 	temperature = temperature * 1.8 + 32;
       char *time = formatted_time(now);
-      printf("%s %.1f\n", time, temperature);
+      sprintf(buf, "%s %.1f\n", time, temperature);
+      SSL_write(sslClient, buf, strlen(buf));
       if(logfile != NULL)
 	fprintf(logfile, "%s %.1f\n", time, temperature);
       free(time);
     }
 
-    int rsize = read(sockfd, combuf + bufsize, 31 - bufsize);
-    //write(2, combuf + bufsize, 31 - bufsize);
+    int rsize = SSL_read(sslClient, combuf + bufsize, 31 - bufsize);
     if(rsize == -1 && errno != EAGAIN){
       fprintf(stderr, "Error using read to get command from terminal: %s\n", strerror(errno));
       exit(1);
@@ -261,7 +270,7 @@ int main(int argc, char **argv){
 	bufsize = 0;
       }
     }
-    
+      
     int button = mraa_gpio_read(gpio_d3);
     if(button == -1){
       fprintf(stderr, "Error using mraa_gpio_read to get button reading\n");
@@ -269,8 +278,8 @@ int main(int argc, char **argv){
     }
     else if(button || off){
       char *time = formatted_time(now);
-      //fprintf(stderr, "but why\n");
-      printf("%s SHUTDOWN\n", time);
+      sprintf(buf, "%s SHUTDOWN\n", time);
+      SSL_write(sslClient, buf, strlen(buf));
       if(logfile != NULL)
 	fprintf(logfile, "%s SHUTDOWN\n", time);
       free(time);

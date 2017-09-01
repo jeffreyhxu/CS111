@@ -1,0 +1,22 @@
+NAME: Jeffrey Xu
+EMAIL: jeffreyhxu@gmail.com
+ID: 404768745
+
+The tarball contains lab4c_tcp.c, lab4c_tls.c, Makefile, and README.
+
+lab4c_tcp.c is the source code for a program based on the one created in lab 4b.
+It performs the same functions and accepts the same options, with the addition
+of connecting to a server, using the --host= option to determine host name,
+defaulting to lever.cs.ucla.edu, --id= to determine ID number, and a command
+line argument to determine port number, defaulting to 18000.
+
+lab4c_tls.c is similar, but uses OpenSSL to establish a SSL/TLS encryption
+session with the server. It accepts the same options, but its port number
+defaults to 19000.
+
+Makefile supports the default target, clean, and dist. The default target builds
+lab4c_tcp and lab4c_tls, passing a flag to implement dummy functions if not
+built on an Edison. clean deletes both executables and the tarball to return to
+freshly untarred state. dist builds the tarball.
+
+README describes the files contained in the tarball.

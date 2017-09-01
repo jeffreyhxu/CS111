@@ -16,7 +16,6 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <poll.h>
 
 #ifndef DUMMY
 #include <mraa/aio.h>
@@ -134,6 +133,10 @@ int main(int argc, char **argv){
     exit(1);
   }
 
+  if(fcntl(0, F_SETFL, O_NONBLOCK) == -1){
+    fprintf(stderr, "Error using fcntl to make stdin non-blocking: %s\n", strerror(errno));
+    exit(1);
+  }
   char *combuf = malloc(32);
   memset(combuf, 0, 32);
   int bufsize = 0;
@@ -161,16 +164,13 @@ int main(int argc, char **argv){
     fprintf(stderr, "Error using connect to connect to server: %s\r\n", strerror(errno));
     exit(1);
   }
-  printf("\n"); // why is this necessary??
+  printf("connected I think\n");
+  close(0);
+  dup(sockfd);
   close(1);
   dup(sockfd);
   printf("ID=%09d\n", uid);
 
-  if(fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1){
-    fprintf(stderr, "Error using fcntl to make socket non-blocking: %s\n", strerror(errno));
-    exit(1);
-  }
-  
   int unstopped = 1;
   int off = 0;
   time_t prev = 0;
@@ -198,8 +198,7 @@ int main(int argc, char **argv){
       free(time);
     }
 
-    int rsize = read(sockfd, combuf + bufsize, 31 - bufsize);
-    //write(2, combuf + bufsize, 31 - bufsize);
+    int rsize = read(0, combuf + bufsize, 31 - bufsize);
     if(rsize == -1 && errno != EAGAIN){
       fprintf(stderr, "Error using read to get command from terminal: %s\n", strerror(errno));
       exit(1);
@@ -261,7 +260,7 @@ int main(int argc, char **argv){
 	bufsize = 0;
       }
     }
-    
+      
     int button = mraa_gpio_read(gpio_d3);
     if(button == -1){
       fprintf(stderr, "Error using mraa_gpio_read to get button reading\n");
@@ -269,7 +268,6 @@ int main(int argc, char **argv){
     }
     else if(button || off){
       char *time = formatted_time(now);
-      //fprintf(stderr, "but why\n");
       printf("%s SHUTDOWN\n", time);
       if(logfile != NULL)
 	fprintf(logfile, "%s SHUTDOWN\n", time);
